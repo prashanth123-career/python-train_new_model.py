@@ -18,7 +18,7 @@ st.write("📞 Contact: WhatsApp 917975931377")
 
 # ✅ Step 1: Download Model if Not Exists
 MODEL_PATH = "models/face_recognition_model.pth"
-MODEL_URL = "https://drive.google.com/uc?id=YOUR_NEW_MODEL_ID"  # Replace with correct ID
+MODEL_URL = "https://drive.google.com/uc?id=1hjMmDWjWpJK4ewXWmEAr4i5Aq6newfIC"  # Replace with correct ID
 
 if not os.path.exists(MODEL_PATH):
     os.makedirs("models", exist_ok=True)
