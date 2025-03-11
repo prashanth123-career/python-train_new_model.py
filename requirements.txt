@@ -1,8 +1,7 @@
-streamlit==1.43.1
-streamlit-webrtc
+streamlit
 torch
 torchvision
 Pillow
 opencv-python-headless
-requests
 numpy
+requests
