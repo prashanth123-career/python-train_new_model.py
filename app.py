@@ -7,6 +7,7 @@ import requests
 import cv2
 import numpy as np
 import time
+import subprocess  # For running git commands
 
 # ✅ Streamlit Branding
 st.set_page_config(page_title="Live Face Recognition", page_icon="👀")
@@ -55,23 +56,33 @@ class FaceRecognitionModel(torch.nn.Module):
         x = self.fc2(x)
         return x
 
-# ✅ Step 3: Load Model & Dataset Classes
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# ✅ Step 3: Clone Git Repository for Dataset
+REPO_URL = "https://github.com/your-username/your-repo.git"  # Replace with your Git repository URL
+DATASET_PATH = "your-repo/data"  # Path to the dataset folder in the repository
+
+if not os.path.exists(DATASET_PATH):
+    st.warning("📂 Dataset folder not found. Cloning repository...")
+    try:
+        subprocess.run(["git", "clone", REPO_URL], check=True)
+        st.success("✅ Repository cloned successfully!")
+    except Exception as e:
+        st.error(f"❌ Failed to clone repository: {e}")
+        st.stop()
 
 # Count number of classes in dataset
-DATASET_PATH = "train"
 if os.path.exists(DATASET_PATH):
     classes = os.listdir(DATASET_PATH)
 else:
     st.warning("⚠️ Dataset folder not found. Using default class 'Unknown'.")
     classes = ["Unknown"]
 
-num_classes = len(classes)
+# Set num_classes to match the checkpoint (2 classes)
+num_classes = 2  # Update this to match the checkpoint
 
 # Load model
 model = FaceRecognitionModel(num_classes=num_classes).to(device)
 try:
-    model.load_state_dict(torch.load(MODEL_PATH, map_location=device), strict=False)
+    model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
     model.eval()
     st.success("✅ Model Loaded Successfully!")
 except Exception as e:
