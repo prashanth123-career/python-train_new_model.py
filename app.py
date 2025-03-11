@@ -1,15 +1,37 @@
-import cv2
+import streamlit as st
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
 import os
-import streamlit as st
+import requests
+import cv2
+import numpy as np
+import time
+import tempfile
 
-# Load trained model
+# ✅ Streamlit Branding
+st.set_page_config(page_title="Live Face Recognition", page_icon="👀")
+
+st.title("🔴 Live Face Recognition | CareerUpskillers")
+st.write("🚀 Developed by [CareerUpskillers](https://www.careerupskillers.com)")
+st.write("📞 Contact: WhatsApp 917975931377")
+
+# ✅ Step 1: Download Model if Not Exists
 MODEL_PATH = "models/face_recognition_model.pth"
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+MODEL_URL = "https://drive.google.com/uc?id=YOUR_NEW_MODEL_ID"  # Replace with correct ID
 
-# Define CNN Model
+if not os.path.exists(MODEL_PATH):
+    st.warning("📥 Downloading model file... Please wait.")
+    response = requests.get(MODEL_URL, stream=True)
+    with open(MODEL_PATH, "wb") as f:
+        for chunk in response.iter_content(chunk_size=1024):
+            if chunk:
+                f.write(chunk)
+    st.success("✅ Model Downloaded Successfully!")
+    time.sleep(2)
+    st.experimental_rerun()
+
+# ✅ Step 2: Define Face Recognition Model
 class FaceRecognitionModel(torch.nn.Module):
     def __init__(self, num_classes):
         super(FaceRecognitionModel, self).__init__()
@@ -28,61 +50,67 @@ class FaceRecognitionModel(torch.nn.Module):
         x = self.fc2(x)
         return x
 
-# Load dataset classes
+# ✅ Step 3: Load Model & Dataset Classes
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Count number of classes in dataset
 DATASET_PATH = "train"
 if os.path.exists(DATASET_PATH):
     classes = os.listdir(DATASET_PATH)
 else:
     classes = ["Unknown"]
 
-# Load model
 num_classes = len(classes)
+
+# Load model
 model = FaceRecognitionModel(num_classes=num_classes).to(device)
 model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
 model.eval()
 
-# Define image transformation
+# ✅ Step 4: Define Image Processing
 transform = transforms.Compose([
     transforms.Resize((64, 64)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 ])
 
-# Initialize webcam
-cap = cv2.VideoCapture(0)
+# ✅ Step 5: Real-Time Webcam Face Recognition
+st.write("## 🎥 Live Face Recognition")
+run = st.button("▶️ Start Live Face Recognition")
 
-# Streamlit UI
-st.title("🟢 AI Face Recognition - CareerUpskillers")
-st.write("📞 Contact: [WhatsApp](https://wa.me/917975931377) | [Website](https://www.careerupskillers.com)")
+if run:
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        st.error("❌ Unable to access webcam!")
+    else:
+        st.success("📷 Webcam Activated! Press 'q' to stop.")
 
-# Start button
-if st.button("Start Face Recognition"):
     while True:
         ret, frame = cap.read()
         if not ret:
-            st.error("❌ Camera not detected!")
-            break
+            continue
 
-        # Convert image
+        # Convert OpenCV frame to PIL
         img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         img_tensor = transform(img).unsqueeze(0).to(device)
 
-        # Predict
+        # Predict Class
         with torch.no_grad():
             output = model(img_tensor)
             predicted_class = torch.argmax(output).item()
 
         label = classes[predicted_class] if predicted_class < len(classes) else "Unknown"
 
-        # Display result
-        cv2.putText(frame, f"Prediction: {label}", (50, 50),
+        # Display Result on Screen
+        cv2.putText(frame, f"Prediction: {label}", (50, 50), 
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-        st.image(frame, channels="BGR", use_column_width=True)
+        cv2.imshow("Real-Time Face Recognition", frame)
 
-        if st.button("Stop"):
+        # Press 'q' to exit
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-cap.release()
-cv2.destroyAllWindows()
-st.write("🔴 Webcam stopped.")
+    cap.release()
+    cv2.destroyAllWindows()
+    st.warning("🔴 Webcam Closed!")
